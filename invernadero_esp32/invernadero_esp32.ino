@@ -2,17 +2,15 @@
   Sketch para control de Invernadero Inteligente Cloud (Firebase + PIR)
   - Control de Temperatura (Ventilación y Calefacción/Luz) con relés Active LOW
   - Control de Humedad de Suelo (Riego) con relé Active LOW
-  - Detección de Movimiento por Sensor PIR (GPIO 13)
+  - Detección de Movimiento por Sensor PIR (GPIO 13) conectado directamente al ESP32
   - Sincronización en Tiempo Real con Firebase Realtime Database
   - SISTEMA DE SUJETO MUERTO (Dead Man's Switch - 20 segundos)
   - SISTEMA DE SEGURIDAD GENERAL (Corte automático a los 7 minutos si se atasca)
   - BLOQUEO TÉRMICO CRÍTICO (> 28.5 °C) - Fuerza extractor ON, apaga calefactor y bloquea controles manuales
 */
-
 #include <WiFi.h>
 #include <FirebaseESP32.h>
 #include <DHT.h>
-
 // Proporciona funciones de ayuda para la autenticación y base de datos de Firebase
 #include <addons/TokenHelper.h>
 #include <addons/RTDBHelper.h>
@@ -20,9 +18,8 @@
 // =========================================================================
 // --- CONFIGURACIÓN DE RED Y CLOUD (Modifica estos datos con los tuyos) ---
 // =========================================================================
-#define WIFI_SSID "TU_WIFI_SSID"
-#define WIFI_PASSWORD "TU_WIFI_PASSWORD"
-
+#define WIFI_SSID "HH SH"
+#define WIFI_PASSWORD "69711328@1234Hhh"
 // URL de Firebase (Paso 3 de la guía de Firebase)
 #define FIREBASE_HOST "https://invernadero-ebc2f-default-rtdb.firebaseio.com/"
 // Token secreto de Firebase (Paso 4 de la guía de Firebase)
@@ -36,7 +33,7 @@
 #define PIN_RELE_VENT 15    // Ventilador (Active LOW)
 #define PIN_RELE_LUZ 2      // Calefacción / Luz (Active LOW)
 #define PIN_RELE_RIEGO 5    // Bomba de Riego (Active LOW)
-#define PIN_PIR 13          // Sensor PIR de movimiento (HIGH = Movimiento)
+#define PIN_PIR 13          // Sensor PIR de movimiento (HIGH = Movimiento) conectado directo al ESP32
 
 // --- CONFIGURACIÓN DE DHT ---
 #define DHTTYPE DHT11        
@@ -51,7 +48,7 @@ float temperatura = 0.0;
 int humedadSuelo = 0;
 bool modoAutomatico = true;     // true = AUTO, false = MANUAL
 bool movimientoDetectado = false;
-bool seguridadPIR = false;       // true = Enciende luces al detectar movimiento, false = sólo notifica
+bool seguridadPIR = false;       // true = Enciende luces/calefacción física al detectar movimiento, false = sólo notifica
 String mensajeSistema = "Iniciando sistema...";
 
 // Variables de estado físicas de los relés (Active LOW: LOW = ON, HIGH = OFF)
@@ -100,14 +97,14 @@ void inicializarFirebase();
 void verificarSeguridadYLimites();
 void verificarSujetoMuerto();
 void actualizarFirebase();
-void streamCallback(FirebaseStream data);
+void streamCallback(StreamData data); // Usa la sintaxis correcta StreamData
 void streamTimeoutCallback(bool timeout);
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("\n=== INVERNADERO INTELIGENTE CLOUD ===");
-
+  
   // Configuración de pines de relé y PIR
   pinMode(PIN_RELE_VENT, OUTPUT);
   pinMode(PIN_RELE_LUZ, OUTPUT);
@@ -118,16 +115,13 @@ void setup() {
   digitalWrite(PIN_RELE_VENT, RELE_OFF);
   digitalWrite(PIN_RELE_LUZ, RELE_OFF);
   digitalWrite(PIN_RELE_RIEGO, RELE_OFF);
-
+  
   // Inicializar sensor DHT
   dht.begin();
-
   // Conectar a Wi-Fi
   conectarWiFi();
-
   // Inicializar Firebase
   inicializarFirebase();
-
   mensajeSistema = "Sistema listo y conectado a la nube.";
   actualizarFirebase();
 }
@@ -136,18 +130,15 @@ void loop() {
   // Comprobar la conexión de Firebase y reanudar si es necesario
   if (Firebase.ready()) {
     unsigned long tiempoActual = millis();
-
     // LECTURA DE SENSORES Y LÓGICA AUTOMÁTICA (Cada 3 segundos)
     if (tiempoActual - ultimoTiempoLectura >= intervaloLectura) {
       ultimoTiempoLectura = tiempoActual;
-
+      
       // 1. --- LECTURA DE SENSORES ---
-      // Humedad del suelo
       int lecturaAnalogica = analogRead(PIN_SUELO);
       int pActual = map(lecturaAnalogica, VALOR_SECO, VALOR_MOJADO, 0, 100);
       humedadSuelo = constrain(pActual, 0, 100);
-
-      // Temperatura
+      
       float t = dht.readTemperature();
       if (!isnan(t)) {
         temperatura = round(t * 10.0) / 10.0;
@@ -156,14 +147,14 @@ void loop() {
         Serial.println("Error leyendo DHT11.");
       }
       Serial.print("Humedad Suelo: "); Serial.print(humedadSuelo); Serial.println("%");
-
+      
       // 2. --- LECTURA DEL SENSOR PIR (Movimiento) ---
       int lecturaPir = digitalRead(PIN_PIR);
       if (lecturaPir == HIGH) {
         if (!movimientoDetectado) {
           movimientoDetectado = true;
           if (seguridadPIR) {
-            // Forzar encendido de luz físicamente y registrar tiempo
+            // Forzar encendido de luz físicamente (relé en pin 2) y registrar tiempo
             digitalWrite(PIN_RELE_LUZ, RELE_ON);
             inicioLuz = tiempoActual;
             mensajeSistema = "ALERTA: ¡Intrusión detectada! Luces encendidas por seguridad.";
@@ -175,17 +166,16 @@ void loop() {
         }
         ultimoMovimientoTiempo = tiempoActual;
       } else {
-        // Si ya pasó el timeout sin detectar movimiento, apagamos la alerta
         if (movimientoDetectado && (tiempoActual - ultimoMovimientoTiempo >= TIMEOUT_PIR)) {
           movimientoDetectado = false;
-          mensajeSistema = "Seguridad OK. Sin presencia.";
+          mensajeSistema = "Security OK. Sin presencia.";
           Serial.println("PIR: Área despejada.");
           
           // Si las luces se encendieron debido al PIR, las apagamos al despejar el área
           if (seguridadPIR) {
-            // Si el modo automático está activo y hace frío, dejamos la calefacción prendida por regla de cultivo
+            // Si el modo automático está activo y hace frío, la dejamos encendida por lógica de cultivo
             if (modoAutomatico && temperatura < TEMP_CAL_ON) {
-              mensajeSistema = "Seguridad OK. Luz activa por frío automático (<16°C).";
+              mensajeSistema = "Security OK. Calefacción activa por frío.";
             } else {
               digitalWrite(PIN_RELE_LUZ, RELE_OFF);
               inicioLuz = 0;
@@ -193,8 +183,8 @@ void loop() {
           }
         }
       }
-
-      // 3. --- LÓGICA AUTOMÁTICA (Solo ejecuta si modoAutomatico es true) ---
+      
+      // 3. --- LÓGICA AUTOMÁTICA ---
       if (modoAutomatico) {
         // Control de Ventilación
         if (temperatura > TEMP_VENT_ON) {
@@ -210,7 +200,7 @@ void loop() {
             mensajeSistema = "AUTO: Ventilación OFF por clima óptimo.";
           }
         }
-
+        
         // Control de Calefacción / Luz
         if (temperatura < TEMP_CAL_ON) {
           if (digitalRead(PIN_RELE_LUZ) == RELE_OFF) {
@@ -225,7 +215,7 @@ void loop() {
             mensajeSistema = "AUTO: Calefacción OFF por clima óptimo.";
           }
         }
-
+        
         // Control de Riego
         if (humedadSuelo <= HUM_SUELO_MIN) {
           if (digitalRead(PIN_RELE_RIEGO) == RELE_OFF) {
@@ -241,28 +231,25 @@ void loop() {
           }
         }
       }
-
+      
       // 4. --- SEGURIDAD LOCAL Y ACTUALIZACIÓN EN LA NUBE ---
-      verificarSeguridadYLimites();
+      verificarSecurityYLimites();
       verificarSujetoMuerto();
       actualizarFirebase();
     }
   }
 }
 
-// --- CONECTAR A LA RED WI-FI ---
 void conectarWiFi() {
   Serial.print("Conectando a Wi-Fi: ");
   Serial.println(WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
   unsigned long startAttempt = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startAttempt < 15000) {
     delay(500);
     Serial.print(".");
   }
-
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\nWi-Fi Conectado con éxito.");
     Serial.print("Dirección IP local: ");
@@ -272,26 +259,23 @@ void conectarWiFi() {
   }
 }
 
-// --- INICIALIZAR LA CONEXIÓN Y STREAM DE FIREBASE ---
 void inicializarFirebase() {
   Serial.println("Inicializando Firebase...");
   
-  config.database_url = DATABASE_URL;
+  config.database_url = FIREBASE_HOST;
   config.signer.tokens.legacy_token = FIREBASE_AUTH;
   
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
-
-  // Iniciar Stream en tiempo real para escuchar los cambios de control
-  if (!Firebase.RTDB.beginStream(&fbdo_stream, "/")) {
+  
+  if (!Firebase.beginStream(fbdo_stream, "/")) {
     Serial.printf("Error al iniciar Stream de Firebase: %s\n", fbdo_stream.errorReason().c_str());
   } else {
     Serial.println("Stream de Firebase iniciado con éxito.");
-    Firebase.RTDB.setStreamCallback(&fbdo_stream, streamCallback, streamTimeoutCallback);
+    Firebase.setStreamCallback(fbdo_stream, streamCallback, streamTimeoutCallback);
   }
 }
 
-// --- ENVIAR LECTURAS LOCALES A FIREBASE ---
 void actualizarFirebase() {
   int timeLeft = 0;
   if (deadManActivo) {
@@ -299,7 +283,6 @@ void actualizarFirebase() {
     timeLeft = (DEAD_MAN_TIMEOUT - elapsed) / 1000;
     if (timeLeft < 0) timeLeft = 0;
   }
-
   FirebaseJson json;
   json.set("temperatura", temperatura);
   json.set("humedadSuelo", humedadSuelo);
@@ -312,8 +295,8 @@ void actualizarFirebase() {
   json.set("mensajeSistema", mensajeSistema);
   json.set("deadManActivo", deadManActivo);
   json.set("deadManTimeLeft", timeLeft);
-
-  if (Firebase.RTDB.updateNode(&fbdo_send, "/", &json)) {
+  
+  if (Firebase.updateNode(fbdo_send, "/", json)) {
     Serial.println("Firebase actualizado con éxito.");
   } else {
     Serial.print("Error al actualizar Firebase: ");
@@ -321,11 +304,9 @@ void actualizarFirebase() {
   }
 }
 
-// --- RECIBIR COMANDOS DESDE FIREBASE EN TIEMPO REAL (CALLBACK) ---
-void streamCallback(FirebaseStream data) {
-  // Evitar procesar datos si el stream acaba de iniciar y devuelve el JSON completo
+// Recibe correctamente (StreamData data) compatible con Firebase ESP32 Client
+void streamCallback(StreamData data) {
   if (data.dataType() == "json") {
-    // Si es el JSON inicial, podemos leer valores para sincronizarnos en el arranque
     FirebaseJson *json = data.jsonObjectPtr();
     FirebaseJsonData jsonData;
     
@@ -336,7 +317,6 @@ void streamCallback(FirebaseStream data) {
       seguridadPIR = jsonData.boolValue;
     }
     
-    // Si la temperatura no es crítica, podemos leer el estado de los relés iniciales
     if (temperatura <= 28.5) {
       if (json->get(jsonData, "releVentilacion")) {
         digitalWrite(PIN_RELE_VENT, jsonData.boolValue ? RELE_ON : RELE_OFF);
@@ -350,23 +330,21 @@ void streamCallback(FirebaseStream data) {
     }
     return;
   }
-
-  // Si la temperatura es crítica, denegamos cualquier control de actuadores manuales de la nube
+  
   if (temperatura > 28.5) {
     if (data.dataPath() == "/releVentilacion" || data.dataPath() == "/releLuz" || data.dataPath() == "/releRiego" || data.dataPath() == "/modoAutomatico") {
       Serial.println("Bloqueo térmico activo. Comando de Firebase denegado.");
       mensajeSistema = "BLOQUEO: ¡Temperatura crítica! Comando remoto rechazado.";
-      actualizarFirebase(); // Revertir los cambios escribiendo el estado local correcto
+      actualizarFirebase();
       return;
     }
   }
-
+  
   String path = data.dataPath();
   bool value = data.boolData();
   unsigned long ahora = millis();
-
   Serial.print("Stream: Cambio en "); Serial.print(path); Serial.print(" -> "); Serial.println(value);
-
+  
   if (path == "/modoAutomatico") {
     modoAutomatico = value;
     if (modoAutomatico) {
@@ -379,8 +357,9 @@ void streamCallback(FirebaseStream data) {
   else if (path == "/seguridadPIR") {
     seguridadPIR = value;
     mensajeSistema = seguridadPIR ? "NUBE: Luces por presencia activadas." : "NUBE: Luces por presencia desactivadas.";
-  }  else if (path == "/releVentilacion") {
-    modoAutomatico = false; // Pone en manual
+  }
+  else if (path == "/releVentilacion") {
+    modoAutomatico = false;
     digitalWrite(PIN_RELE_VENT, value ? RELE_ON : RELE_OFF);
     inicioVent = value ? ahora : 0;
     deadManConfirmadoVent = false;
@@ -404,7 +383,6 @@ void streamCallback(FirebaseStream data) {
     if (value && deadManActivo) {
       deadManActivo = false;
       
-      // Confirmamos qué actuadores en estado óptimo fueron validados
       if (digitalRead(PIN_RELE_VENT) == RELE_ON && temperatura <= TEMP_VENT_OFF) {
         deadManConfirmadoVent = true;
       }
@@ -414,12 +392,10 @@ void streamCallback(FirebaseStream data) {
       if (digitalRead(PIN_RELE_RIEGO) == RELE_ON && humedadSuelo >= HUM_SUELO_MAX) {
         deadManConfirmadoRiego = true;
       }
-
       mensajeSistema = "NUBE: Sujeto muerto confirmado. Control manual retenido.";
       Serial.println("Sujeto Muerto CONFIRMADO vía Firebase.");
       
-      // Apagar la bandera en Firebase para estar listos para la próxima
-      Firebase.RTDB.setBool(&fbdo_send, "/deadManConfirmado", false);
+      Firebase.setBool(fbdo_send, "/deadManConfirmado", false);
     }
   }
 }
@@ -430,29 +406,19 @@ void streamTimeoutCallback(bool timeout) {
   }
 }
 
-// --- VERIFICACIÓN DE SEGURIDAD GENERAL Y BLOQUEO TÉRMICO ---
-void verificarSeguridadYLimites() {
+void verificarSecurityYLimites() {
   unsigned long ahora = millis();
-
-  // --- 1. BLOQUEO TÉRMICO CRÍTICO (> 28.5 °C) ---
   if (temperatura > 28.5) {
-    modoAutomatico = true; // Forzar AUTO
+    modoAutomatico = true;
     deadManActivo = false;
-
-    // Forzar extractor/ventilador ON (Active LOW -> LOW)
     digitalWrite(PIN_RELE_VENT, RELE_ON);
     if (inicioVent == 0) inicioVent = ahora;
-
-    // Apagar Calefacción / Luz inmediatamente (Active LOW -> HIGH)
     digitalWrite(PIN_RELE_LUZ, RELE_OFF);
     inicioLuz = 0;
-    
     mensajeSistema = "BLOQUEO: ¡Temperatura crítica (>28.5°C)! Controles bloqueados.";
     return;
   }
-
-  // --- 2. CORTES POR TIEMPO LÍMITE (7 minutos continuos ON) ---
-  // Riego
+  
   if (digitalRead(PIN_RELE_RIEGO) == RELE_ON) {
     if (inicioRiego == 0) inicioRiego = ahora;
     if (ahora - inicioRiego > LIMITE_SEGURIDAD) {
@@ -464,8 +430,7 @@ void verificarSeguridadYLimites() {
   } else {
     inicioRiego = 0;
   }
-
-  // Ventilación
+  
   if (digitalRead(PIN_RELE_VENT) == RELE_ON) {
     if (inicioVent == 0) inicioVent = ahora;
     if (ahora - inicioVent > LIMITE_SEGURIDAD) {
@@ -477,8 +442,7 @@ void verificarSeguridadYLimites() {
   } else {
     inicioVent = 0;
   }
-
-  // Calefacción / Luz
+  
   if (digitalRead(PIN_RELE_LUZ) == RELE_ON) {
     if (inicioLuz == 0) inicioLuz = ahora;
     if (ahora - inicioLuz > LIMITE_SEGURIDAD) {
@@ -492,25 +456,22 @@ void verificarSeguridadYLimites() {
   }
 }
 
-// --- LÓGICA DE SUJETO MUERTO (DEAD MAN'S SWITCH - 20 SEGUNDOS) ---
 void verificarSujetoMuerto() {
   if (modoAutomatico) {
     deadManActivo = false;
     return;
   }
-
   unsigned long ahora = millis();
   bool necesitaConfirmacion = false;
-
-  // Condiciones de optimización de clima
+  
   bool riegoOptimo = (digitalRead(PIN_RELE_RIEGO) == RELE_ON && humedadSuelo >= HUM_SUELO_MAX);
   bool ventOptima = (digitalRead(PIN_RELE_VENT) == RELE_ON && temperatura <= TEMP_VENT_OFF);
   bool luzOptima = (digitalRead(PIN_RELE_LUZ) == RELE_ON && temperatura >= TEMP_CAL_OFF);
-
+  
   if (riegoOptimo && !deadManConfirmadoRiego) necesitaConfirmacion = true;
   if (ventOptima && !deadManConfirmadoVent) necesitaConfirmacion = true;
   if (luzOptima && !deadManConfirmadoLuz) necesitaConfirmacion = true;
-
+  
   if (necesitaConfirmacion) {
     if (!deadManActivo) {
       deadManActivo = true;
@@ -518,12 +479,10 @@ void verificarSujetoMuerto() {
       mensajeSistema = "AVISO: Clima óptimo. Confirma presencia en 20s o volverá a AUTO.";
       Serial.println("¡Sujeto Muerto ACTIVADO!");
     }
-
     if (ahora - deadManStartTime >= DEAD_MAN_TIMEOUT) {
       deadManActivo = false;
-      modoAutomatico = true; // Retorno a automático
+      modoAutomatico = true;
       
-      // Apagar todos los relés
       digitalWrite(PIN_RELE_VENT, RELE_OFF);
       digitalWrite(PIN_RELE_LUZ, RELE_OFF);
       digitalWrite(PIN_RELE_RIEGO, RELE_OFF);
@@ -531,7 +490,6 @@ void verificarSujetoMuerto() {
       deadManConfirmadoVent = false;
       deadManConfirmadoLuz = false;
       deadManConfirmadoRiego = false;
-
       mensajeSistema = "SEGURIDAD: Retorno forzado a modo AUTO (Sujeto Muerto expirado).";
       Serial.println("Sujeto Muerto EXPIRADO. Modo cambiado a AUTO.");
     }
