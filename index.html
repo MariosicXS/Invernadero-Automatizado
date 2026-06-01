@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioShield - Invernadero Inteligente Cloud</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- BLOQUEO TÉRMICO CRÍTICO (Banner superior visible en alerta) -->
+        <div id="thermal-lockout-banner" class="lockout-banner hidden">
+            <div class="banner-content">
+                <i class="fa-solid fa-triangle-exclamation fa-beat"></i>
+                <span><strong>BLOQUEO TÉRMICO ACTIVO (>28.5°C):</strong> Modo manual deshabilitado por seguridad extrema de las frutillas.</span>
+            </div>
+        </div>
+
+        <!-- HEADER -->
+        <header class="main-header">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fa-solid fa-leaf"></i></div>
+                <div class="logo-text">
+                    <h1>BioShield</h1>
+                    <p>Invernadero de Precisión Cloud v3.0</p>
+                </div>
+            </div>
+            
+            <div class="status-controls">
+                <!-- Selector de Modo Real vs. Simulador -->
+                <div class="mode-toggle-container card-glass">
+                    <span class="mode-label">Modo:</span>
+                    <button id="btn-toggle-simulator" class="btn-mode simulator">
+                        <i class="fa-solid fa-laptop-code"></i> SIMULADOR
+                    </button>
+                </div>
+
+                <!-- Indicador de Conexión a la Nube -->
+                <div id="connection-badge" class="badge-status disconnected">
+                    <span class="dot"></span>
+                    <span class="badge-text">Desconectado</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- BANNER MENSAJE DEL SISTEMA -->
+        <div class="system-message-card card-glass">
+            <div class="msg-icon"><i class="fa-solid fa-circle-info"></i></div>
+            <div class="msg-content">
+                <span class="msg-label">Estado del Invernadero:</span>
+                <span id="system-message" class="msg-text">Iniciando panel en la nube...</span>
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <!-- PANEL IZQUIERDO: SENSORES & SEGURIDAD -->
+            <section class="panel-sensors">
+                
+                <!-- CARD TEMPERATURA -->
+                <div class="sensor-card temp-card card-glass">
+                    <div class="card-header">
+                        <span class="sensor-title"><i class="fa-solid fa-thermometer-half"></i> Temperatura</span>
+                        <span id="temp-trend" class="trend-indicator stable"><i class="fa-solid fa-equals"></i></span>
+                    </div>
+                    <div class="gauge-container">
+                        <div class="gauge-value"><span id="val-temp">0.0</span><span class="unit">°C</span></div>
+                        <div class="gauge-bar-bg">
+                            <div id="bar-temp" class="gauge-bar temp" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="sensor-footer">
+                        <span>Frutillas AUTO: <strong class="cool-blue">16.0°C</strong> - <strong class="hot-red">26.0°C</strong></span>
+                    </div>
+                </div>
+
+                <!-- CARD HUMEDAD DEL SUELO -->
+                <div class="sensor-card moisture-card card-glass">
+                    <div class="card-header">
+                        <span class="sensor-title"><i class="fa-solid fa-droplet"></i> Humedad del Suelo</span>
+                        <span id="moisture-trend" class="trend-indicator stable"><i class="fa-solid fa-equals"></i></span>
+                    </div>
+                    <div class="gauge-container">
+                        <div class="gauge-value"><span id="val-moisture">0</span><span class="unit">%</span></div>
+                        <div class="gauge-bar-bg">
+                            <div id="bar-moisture" class="gauge-bar moisture" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="sensor-footer">
+                        <span>Rango Óptimo: <strong>50%</strong> - <strong>70%</strong></span>
+                    </div>
+                </div>
+
+                <!-- CARD SENSOR PIR (DETECTOR DE MOVIMIENTO) -->
+                <div class="sensor-card pir-card card-glass" id="pir-card">
+                    <div class="card-header">
+                        <span class="sensor-title"><i class="fa-solid fa-shield-halved"></i> Seguridad PIR</span>
+                        <span id="pir-status-dot" class="trend-indicator stable"><i class="fa-solid fa-eye"></i></span>
+                    </div>
+                    <div class="pir-container">
+                        <div id="pir-visual" class="pir-shield-glow secured">
+                            <i id="pir-icon" class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="pir-value-text" id="val-pir">Área Protegida</div>
+                    </div>
+                    <div class="sensor-footer">
+                        <span>Detector Infrarrojo Pasivo (GPIO 13)</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- PANEL CENTRAL: ACTUADORES & CONTROLES -->
+            <section class="panel-controls">
+                
+                <!-- SELECCIÓN DE MODO OPERATIVO -->
+                <div class="control-card mode-selector card-glass">
+                    <h3><i class="fa-solid fa-sliders"></i> Modo de Operación</h3>
+                    <div class="radio-group">
+                        <input type="radio" id="mode-auto" name="operation-mode" value="auto" checked>
+                        <label for="mode-auto" class="mode-btn-label auto">
+                            <i class="fa-solid fa-robot"></i> AUTOMÁTICO
+                        </label>
+
+                        <input type="radio" id="mode-manual" name="operation-mode" value="manual">
+                        <label for="mode-manual" class="mode-btn-label manual">
+                            <i class="fa-solid fa-hand"></i> MANUAL
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CONTROLES MANUALES -->
+                <div class="control-card actuators-card card-glass">
+                    <div class="card-header-with-action">
+                        <h3><i class="fa-solid fa-bolt"></i> Control de Actuadores</h3>
+                        <span id="manual-locked-indicator" class="lock-indicator hidden"><i class="fa-solid fa-lock"></i> BLOQUEADO</span>
+                    </div>
+                    
+                    <div class="actuator-list">
+                        <!-- VENTILADOR -->
+                        <div class="actuator-row" id="row-vent">
+                            <div class="actuator-info">
+                                <span class="actuator-icon vent-icon"><i class="fa-solid fa-fan"></i></span>
+                                <div class="actuator-details">
+                                    <span class="actuator-name">Extractor de Aire</span>
+                                    <span class="actuator-desc">Extractor / Ventilación (GPIO 15)</span>
+                                </div>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="switch-vent" disabled>
+                                <label for="switch-vent" class="switch-label"></label>
+                            </div>
+                        </div>
+
+                        <!-- CALEFACCIÓN / LUZ -->
+                        <div class="actuator-row" id="row-light">
+                            <div class="actuator-info">
+                                <span class="actuator-icon light-icon"><i class="fa-solid fa-lightbulb"></i></span>
+                                <div class="actuator-details">
+                                    <span class="actuator-name">Calefacción / Luz</span>
+                                    <span class="actuator-desc">Lámpara térmica (GPIO 2)</span>
+                                </div>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="switch-light" disabled>
+                                <label for="switch-light" class="switch-label"></label>
+                            </div>
+                        </div>
+
+                        <!-- BOMBA DE RIEGO -->
+                        <div class="actuator-row" id="row-riego">
+                            <div class="actuator-info">
+                                <span class="actuator-icon riego-icon"><i class="fa-solid fa-pump-soap"></i></span>
+                                <div class="actuator-details">
+                                    <span class="actuator-name">Bomba de Riego</span>
+                                    <span class="actuator-desc">Válvula solenoide (GPIO 5)</span>
+                                </div>
+                            </div>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="switch-riego" disabled>
+                                <label for="switch-riego" class="switch-label"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- PANEL DERECHO: CONFIGURACIÓN DE FIREBASE & SIMULACIÓN -->
+            <section class="panel-settings">
+                
+                <!-- CONFIGURACIÓN DE FIREBASE -->
+                <div class="control-card firebase-card card-glass">
+                    <h3><i class="fa-solid fa-cloud"></i> Configuración de Firebase</h3>
+                    <p class="section-desc">Ingresa las credenciales de tu Firebase Realtime Database para conectar el panel al invernadero en tiempo real.</p>
+                    <form id="firebase-form">
+                        <div class="form-group">
+                            <label for="fb-db-url">URL de la Base de Datos</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-link"></i>
+                                <input type="url" id="fb-db-url" placeholder="https://mi-proyecto-rtdb.firebaseio.com/" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fb-auth-token">Clave Secreta (Token - Opcional)</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-key"></i>
+                                <input type="password" id="fb-auth-token" placeholder="Token secreto para seguridad">
+                            </div>
+                        </div>
+                        <button type="submit" id="btn-save-firebase" class="btn-submit">
+                            <i class="fa-solid fa-floppy-disk"></i> Conectar y Guardar
+                        </button>
+                    </form>
+                </div>
+
+                <!-- CONTROLES DEL SIMULADOR (Sólo visible en modo Simulador) -->
+                <div id="simulator-settings-card" class="control-card simulator-settings card-glass">
+                    <h3><i class="fa-solid fa-circle-nodes"></i> Parámetros de Simulación</h3>
+                    <p class="section-desc">Ajusta los sensores en tiempo real para emular el comportamiento o probar las seguridades del sistema.</p>
+                    
+                    <div class="sim-group">
+                        <div class="sim-label-row">
+                            <span>Temperatura Ambiente</span>
+                            <span class="sim-badge" id="sim-temp-display">25.0 °C</span>
+                        </div>
+                        <input type="range" id="sim-temp" min="15" max="35" step="0.1" value="25.0">
+                    </div>
+
+                    <div class="sim-group">
+                        <div class="sim-label-row">
+                            <span>Humedad del Suelo</span>
+                            <span class="sim-badge" id="sim-moisture-display">50%</span>
+                        </div>
+                        <input type="range" id="sim-moisture" min="10" max="90" step="1" value="50">
+                    </div>
+
+                    <div class="sim-group">
+                        <div class="sim-label-row">
+                            <span>Detección de Movimiento PIR</span>
+                            <span class="sim-badge" id="sim-pir-display">Sin Movimiento</span>
+                        </div>
+                        <div style="display:flex; justify-content:center; margin-top:5px;">
+                            <button type="button" id="btn-sim-pir" class="btn-preset" style="width:100%; border-radius:8px;"><i class="fa-solid fa-person-running"></i> Simular Detección de Movimiento</button>
+                        </div>
+                    </div>
+
+                    <div class="sim-group quick-presets">
+                        <span class="presets-title">Presets Rápidos:</span>
+                        <div class="presets-buttons">
+                            <button id="preset-freeze" class="btn-preset"><i class="fa-solid fa-snowflake"></i> Frío Extremo (15°C)</button>
+                            <button id="preset-hot" class="btn-preset"><i class="fa-solid fa-fire"></i> Calor Extremo (29°C)</button>
+                            <button id="preset-dry" class="btn-preset"><i class="fa-solid fa-wind"></i> Tierra Seca (25%)</button>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>BioShield Cloud Panel - Monitoreo Global en Tiempo Real para Frutillas</p>
+            <div id="cloud-info-status">Conectado a Firebase: <span id="firebase-connected-url">Ninguno</span></div>
+        </footer>
+
+        <!-- MODAL DE SUJETO MUERTO (Alerta de 20 segundos) -->
+        <div id="dead-man-modal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <div class="warning-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h2>¡Sujeto Muerto Activo!</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="warning-alert-text">SE DETECTÓ ESTADO ÓPTIMO EN EL INVERNADERO</p>
+                    <p class="modal-desc">El invernadero ha alcanzado sus valores óptimos en modo manual. Para evitar pérdidas, debes confirmar tu presencia para mantener el control manual.</p>
+                    
+                    <!-- Temporizador circular visual -->
+                    <div class="circular-timer">
+                        <svg class="timer-svg" viewBox="0 0 100 100">
+                            <circle class="timer-circle-bg" cx="50" cy="50" r="45"></circle>
+                            <circle id="timer-circle-progress" class="timer-circle-fg" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <div id="dead-man-timer-display" class="timer-number">20</div>
+                    </div>
+
+                    <p class="timeout-alert-text">Si no respondes en <span id="timer-number-seconds">20</span> segundos, el sistema volverá forzadamente a **AUTOMÁTICO** para cuidar las plantas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-confirm-dead-man" class="btn-confirm">
+                        <i class="fa-solid fa-check-double"></i> CONFIRMAR PRESENCIA (MANTENER MANUAL)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SDKs de Firebase (Compatibilidad heredada para ejecutarse directamente desde archivos locales) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <!-- Script de lógica de negocio -->
+    <script src="app.js"></script>
+</body>
+</html>
