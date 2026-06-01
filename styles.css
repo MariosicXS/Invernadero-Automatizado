@@ -82,6 +82,37 @@ body {
     box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
 }
 
+/* Hovers específicos con Colores Vivos y Resplandores Premium */
+.temp-card:hover {
+    border-color: rgba(245, 158, 11, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(245, 158, 11, 0.18);
+}
+
+.moisture-card:hover {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(37, 99, 235, 0.18);
+}
+
+.pir-card:hover {
+    border-color: rgba(16, 185, 129, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(16, 185, 129, 0.18);
+}
+
+.actuators-card:hover {
+    border-color: rgba(6, 182, 212, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(6, 182, 212, 0.12);
+}
+
+.firebase-card:hover {
+    border-color: rgba(16, 185, 129, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(16, 185, 129, 0.12);
+}
+
+.simulator-settings:hover {
+    border-color: rgba(6, 182, 212, 0.35);
+    box-shadow: 0 12px 45px 0 rgba(6, 182, 212, 0.12);
+}
+
 /* -------------------------------------------------------------
    Thermal Lockout Alert Banner
    ------------------------------------------------------------- */
@@ -684,8 +715,8 @@ body {
    ------------------------------------------------------------- */
 .toggle-switch {
     position: relative;
-    width: 50px;
-    height: 26px;
+    width: 68px;
+    height: 28px;
 }
 
 .toggle-switch input {
@@ -698,36 +729,72 @@ body {
     position: absolute;
     cursor: pointer;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #374151;
+    background-color: #1f2937;
     border-radius: 34px;
-    transition: 0.3s;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* El círculo del switch */
 .switch-label:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
+    height: 20px;
+    width: 20px;
+    left: 4px;
     bottom: 3px;
     background-color: #ffffff;
     border-radius: 50%;
-    transition: 0.3s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+    z-index: 2;
 }
 
-/* Specific Toggle Switch Color Targets */
-#switch-vent:checked + .switch-label { background-color: var(--color-vent); }
-#switch-light:checked + .switch-label { background-color: var(--color-light); }
-#switch-riego:checked + .switch-label { background-color: var(--color-riego); }
+/* Texto flotante ON/OFF */
+.switch-label:after {
+    position: absolute;
+    content: "OFF";
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+}
+
+/* Specific Toggle Switch Color Targets - Colores Vivos */
+#switch-vent:checked + .switch-label { 
+    background-color: #10b981; 
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+#switch-light:checked + .switch-label { 
+    background-color: #ea580c; 
+    box-shadow: 0 0 10px rgba(234, 88, 12, 0.4);
+}
+#switch-riego:checked + .switch-label { 
+    background-color: #2563eb; 
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+}
+#switch-pir-light:checked + .switch-label { 
+    background-color: #ef4444; 
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
 
 .toggle-switch input:checked + .switch-label:before {
-    transform: translateX(24px);
+    transform: translateX(40px);
+}
+
+.toggle-switch input:checked + .switch-label:after {
+    content: "ON";
+    color: #ffffff;
+    left: 10px;
+    right: auto;
 }
 
 .toggle-switch input:disabled + .switch-label {
-    opacity: 0.4;
+    opacity: 0.35;
     cursor: not-allowed;
 }
 
