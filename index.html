@@ -110,7 +110,20 @@
                         </div>
                         <div class="pir-value-text" id="val-pir">Área Protegida</div>
                     </div>
-                    <div class="sensor-footer">
+                    
+                    <!-- CONTROL DE LUZ POR PRESENCIA -->
+                    <div class="pir-options" style="border-top: 1px solid rgba(255, 255, 255, 0.04); margin-top: 1.25rem; padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="option-desc" style="display: flex; flex-direction: column; gap: 2px; text-align: left;">
+                            <span style="font-size: 0.85rem; font-weight: 600;"><i class="fa-solid fa-lightbulb" style="color: var(--accent-amber); margin-right: 4px;"></i> Encender Luz al Detectar</span>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary);">Enciende focos por movimiento</span>
+                        </div>
+                        <div class="toggle-switch" style="width: 50px; height: 26px;">
+                            <input type="checkbox" id="switch-pir-light">
+                            <label for="switch-pir-light" class="switch-label"></label>
+                        </div>
+                    </div>
+
+                    <div class="sensor-footer" style="margin-top: 1rem;">
                         <span>Detector Infrarrojo Pasivo (GPIO 13)</span>
                     </div>
                 </div>

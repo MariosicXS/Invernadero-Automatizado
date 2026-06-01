@@ -23,6 +23,7 @@ let systemState = {
     dead_man_active: false,
     dead_man_time_left: 20,
     movimientoDetectado: false,
+    seguridadPIR: false,
     system_message: "Sistema iniciado. Por favor, configura tu Firebase en el panel derecho."
 };
 
@@ -55,6 +56,7 @@ const elPirVisual = document.getElementById("pir-visual");
 const elPirIcon = document.getElementById("pir-icon");
 const elValPir = document.getElementById("val-pir");
 const elPirStatusDot = document.getElementById("pir-status-dot");
+const elSwitchPirLight = document.getElementById("switch-pir-light");
 
 const elSystemMessage = document.getElementById("system-message");
 const elSystemMessageCard = document.querySelector(".system-message-card");
@@ -152,6 +154,20 @@ document.addEventListener("DOMContentLoaded", () => {
     elSwitchVent.addEventListener("change", (e) => setActuatorState("vent", e.target.checked ? 1 : 0));
     elSwitchLight.addEventListener("change", (e) => setActuatorState("light", e.target.checked ? 1 : 0));
     elSwitchRiego.addEventListener("change", (e) => setActuatorState("irrigation", e.target.checked ? 1 : 0));
+
+    // Evento de Switch de Encendido de Luz por PIR
+    elSwitchPirLight.addEventListener("change", (e) => {
+        const isChecked = e.target.checked;
+        if (isSimulatorMode) {
+            systemState.seguridadPIR = isChecked;
+            systemState.system_message = isChecked ? "SIMULADOR: Luces por presencia activadas." : "SIMULADOR: Luces por presencia desactivadas.";
+            renderState();
+        } else {
+            if (db) {
+                db.ref("/seguridadPIR").set(isChecked);
+            }
+        }
+    });
 
     // Confirmación del Sujeto Muerto
     elBtnConfirmDeadMan.addEventListener("click", confirmUserPresence);
@@ -344,6 +360,7 @@ function conectarFirebaseRealtime() {
                 systemState.dead_man_time_left = data.deadManTimeLeft !== undefined ? parseInt(data.deadManTimeLeft) : 20;
                 systemState.system_message = data.mensajeSistema || systemState.system_message;
                 systemState.movimientoDetectado = data.movimientoDetectado || false;
+                systemState.seguridadPIR = data.seguridadPIR || false;
 
                 // Conexión exitosa
                 elConnectionBadge.className = "badge-status connected";
@@ -404,6 +421,12 @@ function runSimulationStep() {
 
     systemState.temp = temp;
     systemState.moisture = moisture;
+
+    // Lógica adicional para seguridad PIR en el simulador
+    if (systemState.movimientoDetectado && systemState.seguridadPIR) {
+        systemState.relay_light = 1;
+        systemState.system_message = "ALERTA: ¡Intrusión detectada! Luces encendidas por seguridad.";
+    }
 
     // --- LÓGICA AUTOMÁTICA DEL SIMULADOR ---
     if (systemState.mode === "AUTO") {
@@ -519,9 +542,15 @@ function triggerSimulatedPIR() {
     if (simPirTimeout) clearTimeout(simPirTimeout);
     
     systemState.movimientoDetectado = true;
-    systemState.system_message = "ALERTA: ¡Movimiento detectado en el invernadero!";
     elSimPirDisplay.textContent = "MOVIMIENTO DETECTADO";
     elSimPirDisplay.style.color = "var(--accent-red)";
+    
+    if (systemState.seguridadPIR) {
+        systemState.relay_light = 1;
+        systemState.system_message = "ALERTA: ¡Intrusión detectada! Luces encendidas por seguridad.";
+    } else {
+        systemState.system_message = "ALERTA: ¡Movimiento detectado en el invernadero!";
+    }
     
     renderState();
 
@@ -531,6 +560,16 @@ function triggerSimulatedPIR() {
         systemState.system_message = "Seguridad OK. Sin presencia.";
         elSimPirDisplay.textContent = "Sin Movimiento";
         elSimPirDisplay.style.color = "";
+        
+        // Si las luces se encendieron por el PIR, las apagamos al despejar la zona
+        if (systemState.seguridadPIR) {
+            if (systemState.mode === "AUTO" && systemState.temp < 16.0) {
+                systemState.system_message = "Seguridad OK. Calefacción activa por frío.";
+            } else {
+                systemState.relay_light = 0;
+            }
+        }
+        
         renderState();
     }, 10000);
 }
@@ -713,6 +752,7 @@ function renderState() {
     elSwitchVent.checked = (systemState.relay_vent === 1);
     elSwitchLight.checked = (systemState.relay_light === 1);
     elSwitchRiego.checked = (systemState.relay_riego === 1);
+    elSwitchPirLight.checked = systemState.seguridadPIR;
 
     // Activar clases visuales en las filas de los actuadores
     if (systemState.relay_vent === 1) elRowVent.classList.add("active");

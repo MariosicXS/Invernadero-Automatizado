@@ -51,6 +51,7 @@ float temperatura = 0.0;
 int humedadSuelo = 0;
 bool modoAutomatico = true;     // true = AUTO, false = MANUAL
 bool movimientoDetectado = false;
+bool seguridadPIR = false;       // true = Enciende luces al detectar movimiento, false = sólo notifica
 String mensajeSistema = "Iniciando sistema...";
 
 // Variables de estado físicas de los relés (Active LOW: LOW = ON, HIGH = OFF)
@@ -161,8 +162,16 @@ void loop() {
       if (lecturaPir == HIGH) {
         if (!movimientoDetectado) {
           movimientoDetectado = true;
-          mensajeSistema = "ALERTA: ¡Movimiento detectado en el invernadero!";
-          Serial.println("¡PIR: Movimiento DETECTADO!");
+          if (seguridadPIR) {
+            // Forzar encendido de luz físicamente y registrar tiempo
+            digitalWrite(PIN_RELE_LUZ, RELE_ON);
+            inicioLuz = tiempoActual;
+            mensajeSistema = "ALERTA: ¡Intrusión detectada! Luces encendidas por seguridad.";
+            Serial.println("PIR: ¡Intrusión! Encendiendo Luces.");
+          } else {
+            mensajeSistema = "ALERTA: ¡Movimiento detectado en el invernadero!";
+            Serial.println("PIR: ¡Movimiento DETECTADO!");
+          }
         }
         ultimoMovimientoTiempo = tiempoActual;
       } else {
@@ -171,6 +180,17 @@ void loop() {
           movimientoDetectado = false;
           mensajeSistema = "Seguridad OK. Sin presencia.";
           Serial.println("PIR: Área despejada.");
+          
+          // Si las luces se encendieron debido al PIR, las apagamos al despejar el área
+          if (seguridadPIR) {
+            // Si el modo automático está activo y hace frío, dejamos la calefacción prendida por regla de cultivo
+            if (modoAutomatico && temperatura < TEMP_CAL_ON) {
+              mensajeSistema = "Seguridad OK. Luz activa por frío automático (<16°C).";
+            } else {
+              digitalWrite(PIN_RELE_LUZ, RELE_OFF);
+              inicioLuz = 0;
+            }
+          }
         }
       }
 
@@ -284,6 +304,7 @@ void actualizarFirebase() {
   json.set("temperatura", temperatura);
   json.set("humedadSuelo", humedadSuelo);
   json.set("movimientoDetectado", movimientoDetectado);
+  json.set("seguridadPIR", seguridadPIR);
   json.set("modoAutomatico", modoAutomatico);
   json.set("releVentilacion", digitalRead(PIN_RELE_VENT) == RELE_ON);
   json.set("releLuz", digitalRead(PIN_RELE_LUZ) == RELE_ON);
@@ -310,6 +331,9 @@ void streamCallback(FirebaseStream data) {
     
     if (json->get(jsonData, "modoAutomatico")) {
       modoAutomatico = jsonData.boolValue;
+    }
+    if (json->get(jsonData, "seguridadPIR")) {
+      seguridadPIR = jsonData.boolValue;
     }
     
     // Si la temperatura no es crítica, podemos leer el estado de los relés iniciales
@@ -352,7 +376,10 @@ void streamCallback(FirebaseStream data) {
       mensajeSistema = "NUBE: Cambiado a modo MANUAL por usuario.";
     }
   } 
-  else if (path == "/releVentilacion") {
+  else if (path == "/seguridadPIR") {
+    seguridadPIR = value;
+    mensajeSistema = seguridadPIR ? "NUBE: Luces por presencia activadas." : "NUBE: Luces por presencia desactivadas.";
+  }  else if (path == "/releVentilacion") {
     modoAutomatico = false; // Pone en manual
     digitalWrite(PIN_RELE_VENT, value ? RELE_ON : RELE_OFF);
     inicioVent = value ? ahora : 0;
