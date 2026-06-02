@@ -98,11 +98,9 @@ const elPresetFreeze = document.getElementById("preset-freeze");
 const elPresetHot = document.getElementById("preset-hot");
 const elPresetDry = document.getElementById("preset-dry");
 
-// Modal Sujeto Muerto
-const elDeadManModal = document.getElementById("dead-man-modal");
-const elDeadManTimerDisplay = document.getElementById("dead-man-timer-display");
-const elTimerNumberSeconds = document.getElementById("timer-number-seconds");
-const elTimerCircleProgress = document.getElementById("timer-circle-progress");
+// Temporizador Inline de Sujeto Muerto
+const elDeadManInline = document.getElementById("dead-man-inline");
+const elDeadManInlineCount = document.getElementById("dead-man-inline-count");
 const elBtnConfirmDeadMan = document.getElementById("btn-confirm-dead-man");
 
 // --- INICIALIZACIÓN ---
@@ -657,7 +655,7 @@ function confirmUserPresence() {
             }
 
             systemState.system_message = "MANUAL: Presencia confirmada. Reteniendo modo MANUAL.";
-            elDeadManModal.classList.add("hidden");
+            elDeadManInline.classList.add("hidden");
             renderState();
         }
     } else {
@@ -792,16 +790,20 @@ function renderState() {
         elModeManual.disabled = false;
     }
 
-    // 7. Manejar MODAL DE ALERTA DE SUJETO MUERTO (20s)
+    // 7. Manejar TEMPORIZADOR INLINE DE SUJETO MUERTO (20s)
     if (systemState.dead_man_active && systemState.temp <= 28.5) {
-        elDeadManModal.classList.remove("hidden");
-        elDeadManTimerDisplay.textContent = systemState.dead_man_time_left;
-        elTimerNumberSeconds.textContent = systemState.dead_man_time_left;
+        elDeadManInline.classList.remove("hidden");
+        elDeadManInlineCount.textContent = systemState.dead_man_time_left;
 
-        const circumference = 283;
-        const offset = circumference - (systemState.dead_man_time_left / 20) * circumference;
-        elTimerCircleProgress.style.strokeDashoffset = offset;
+        // Cambiar color del conteo según urgencia
+        if (systemState.dead_man_time_left <= 5) {
+            elDeadManInlineCount.style.color = "var(--accent-red)";
+        } else if (systemState.dead_man_time_left <= 10) {
+            elDeadManInlineCount.style.color = "var(--accent-amber)";
+        } else {
+            elDeadManInlineCount.style.color = "";
+        }
     } else {
-        elDeadManModal.classList.add("hidden");
+        elDeadManInline.classList.add("hidden");
     }
 }

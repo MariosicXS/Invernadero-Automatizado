@@ -82,37 +82,6 @@ body {
     box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
 }
 
-/* Hovers específicos con Colores Vivos y Resplandores Premium */
-.temp-card:hover {
-    border-color: rgba(245, 158, 11, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(245, 158, 11, 0.18);
-}
-
-.moisture-card:hover {
-    border-color: rgba(37, 99, 235, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(37, 99, 235, 0.18);
-}
-
-.pir-card:hover {
-    border-color: rgba(16, 185, 129, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(16, 185, 129, 0.18);
-}
-
-.actuators-card:hover {
-    border-color: rgba(6, 182, 212, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(6, 182, 212, 0.12);
-}
-
-.firebase-card:hover {
-    border-color: rgba(16, 185, 129, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(16, 185, 129, 0.12);
-}
-
-.simulator-settings:hover {
-    border-color: rgba(6, 182, 212, 0.35);
-    box-shadow: 0 12px 45px 0 rgba(6, 182, 212, 0.12);
-}
-
 /* -------------------------------------------------------------
    Thermal Lockout Alert Banner
    ------------------------------------------------------------- */
@@ -715,8 +684,8 @@ body {
    ------------------------------------------------------------- */
 .toggle-switch {
     position: relative;
-    width: 68px;
-    height: 28px;
+    width: 50px;
+    height: 26px;
 }
 
 .toggle-switch input {
@@ -729,72 +698,36 @@ body {
     position: absolute;
     cursor: pointer;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #1f2937;
+    background-color: #374151;
     border-radius: 34px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* El círculo del switch */
 .switch-label:before {
     position: absolute;
     content: "";
-    height: 20px;
-    width: 20px;
-    left: 4px;
+    height: 18px;
+    width: 18px;
+    left: 3px;
     bottom: 3px;
     background-color: #ffffff;
     border-radius: 50%;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
-    z-index: 2;
+    transition: 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Texto flotante ON/OFF */
-.switch-label:after {
-    position: absolute;
-    content: "OFF";
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    transition: all 0.3s ease;
-    letter-spacing: 0.5px;
-}
-
-/* Specific Toggle Switch Color Targets - Colores Vivos */
-#switch-vent:checked + .switch-label { 
-    background-color: #10b981; 
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-}
-#switch-light:checked + .switch-label { 
-    background-color: #ea580c; 
-    box-shadow: 0 0 10px rgba(234, 88, 12, 0.4);
-}
-#switch-riego:checked + .switch-label { 
-    background-color: #2563eb; 
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
-}
-#switch-pir-light:checked + .switch-label { 
-    background-color: #ef4444; 
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-}
+/* Specific Toggle Switch Color Targets */
+#switch-vent:checked + .switch-label { background-color: var(--color-vent); }
+#switch-light:checked + .switch-label { background-color: var(--color-light); }
+#switch-riego:checked + .switch-label { background-color: var(--color-riego); }
 
 .toggle-switch input:checked + .switch-label:before {
-    transform: translateX(40px);
-}
-
-.toggle-switch input:checked + .switch-label:after {
-    content: "ON";
-    color: #ffffff;
-    left: 10px;
-    right: auto;
+    transform: translateX(24px);
 }
 
 .toggle-switch input:disabled + .switch-label {
-    opacity: 0.35;
+    opacity: 0.4;
     cursor: not-allowed;
 }
 
@@ -1257,3 +1190,60 @@ body {
     }
 }
 
+/* -------------------------------------------------------------
+   Temporizador Inline de Sujeto Muerto (reemplaza el modal)
+   ------------------------------------------------------------- */
+.dead-man-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    padding: 0.5rem 0.85rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-amber);
+    animation: deadManPulseInline 1.5s infinite alternate;
+    flex-wrap: wrap;
+}
+
+.dead-man-inline i {
+    font-size: 0.95rem;
+}
+
+.dead-man-count {
+    font-size: 1.15rem;
+    font-weight: 800;
+    min-width: 1.6rem;
+    text-align: center;
+    transition: color 0.4s ease;
+}
+
+.btn-confirm-inline {
+    margin-left: auto;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: var(--accent-emerald);
+    border-radius: 7px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: var(--font-main);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-confirm-inline:hover {
+    background: rgba(16, 185, 129, 0.32);
+    transform: scale(1.04);
+}
+
+@keyframes deadManPulseInline {
+    from { border-color: rgba(245, 158, 11, 0.25); background: rgba(245, 158, 11, 0.07); }
+    to   { border-color: rgba(245, 158, 11, 0.6);  background: rgba(245, 158, 11, 0.14); }
+}
