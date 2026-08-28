@@ -18,8 +18,8 @@
 // =========================================================================
 // --- CONFIGURACIÓN DE RED Y CLOUD (Modifica estos datos con los tuyos) ---
 // =========================================================================
-#define WIFI_SSID "HH SH"
-#define WIFI_PASSWORD "69711328@1234Hhh"
+#define WIFI_SSID "nombre de la red"
+#define WIFI_PASSWORD "contraseña de la red"
 // URL de Firebase (Paso 3 de la guía de Firebase)
 #define FIREBASE_HOST "https://invernadero-ebc2f-default-rtdb.firebaseio.com/"
 // Token secreto de Firebase (Paso 4 de la guía de Firebase)
